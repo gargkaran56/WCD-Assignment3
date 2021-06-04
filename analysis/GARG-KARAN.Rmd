@@ -1,0 +1,360 @@
+---
+title: "Data deidentification and modification"
+subtitle: Assignment 3, Master of Business Analytics
+author: Prepared by Karan Garg, 32106580, kgar0017@student.monash.edu 
+date: '`r Sys.Date()`'
+output:
+  bookdown::html_document2: 
+              citation_package: biblatex
+              css: monashreport.css
+              includes:
+               before_body: header.html
+               toc: true
+               toc_float: true
+  bookdown::pdf_document2: default
+keep_md: true 
+bibliography: 
+- packages.bib
+biblio-style: authoryear-comp
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      messages = FALSE, 
+                      warning = FALSE)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+library(bookdown)
+library(plotly)
+```
+
+# 🔍 Analysis
+
+```{r read-data,include=FALSE}
+data <- readRDS(here::here("raw_data/survey_data.rds"))
+```
+
+## Identify and remove the **direct identifiers** from the data.
+
+Out of **`r dim(data)[2]`** variables, below  **7** were considered as **direct identifiers** :
+
+*  IPAddress
+*  LocationLatitude
+*  LocationLongitude
+   *  The above **3** variables can help directly in detecting the location of the respondent.
+   *  In order to not reduce the utility of the data, **postcode** is not removed and will be helpful in doing some area-wise analysis.
+*  ResponseID
+*  ResponseLastName
+*  ResponseFirstName
+*  QID28 (Containing email address of the respondent)
+   *  The above **4** will easily help/convey the individual identity of a respondent
+
+
+In addition, class type of below variables was changed to **factorial** as they contained categorical values:
+
+***QID12, QID10, QID14, QID16, QID20, QID23, QID26, QID27, QID17_1, QID17_2, QID17_3, QID17_4, QID17_5, QID18_1, QID18_2, QID18_3, QID18_4, QID18_5, QID24_1, QID24_2, QID24_3, QID24_4, QID24_5, QID24_6, QID25_1, QID25_2, QID25_3, QID25_4, QID25_5, QID25_6***
+
+Lastly, a data collection error of **2** variables namely **QID10** and **QID16** was also fixed.
+
+*  These variables collected option value rather than option number for 1 categorical level.
+*  It was resolved by changing the class of variable to **char** and then rep;lacing all the issue values and changing the class to **factorial** then.
+
+```{r tbl1}
+data %>% 
+  select(-c(IPAddress,ResponseID,ResponseLastName,ResponseFirstName,LocationLatitude,LocationLongitude,QID28)) %>% 
+  mutate(Finished = as.factor(Finished),
+         QID12 = as.factor(QID12),
+         QID10 = as.character(QID10),
+         QID14 = as.factor(QID14),
+         QID16 = as.character(QID16),
+         QID20 = as.factor(QID20),
+         QID23 = as.factor(QID23),
+         QID26 = as.factor(QID26),
+         QID27 = as.factor(QID27),
+         QID17_1 = as.factor(QID17_1),
+         QID17_2 = as.factor(QID17_2),
+         QID17_3 = as.factor(QID17_3),
+         QID17_4 = as.factor(QID17_4),
+         QID17_5 = as.factor(QID17_5),
+         QID18_1 = as.factor(QID18_1),
+         QID18_2 = as.factor(QID18_2),
+         QID18_3 = as.factor(QID18_3),
+         QID18_4 = as.factor(QID18_4),
+         QID18_5 = as.factor(QID18_5),
+         QID24_1 = as.factor(QID24_1),
+         QID24_2 = as.factor(QID24_2),
+         QID24_3 = as.factor(QID24_3),
+         QID24_4 = as.factor(QID24_4),
+         QID24_5 = as.factor(QID24_5),
+         QID24_6 = as.factor(QID24_6),
+         QID25_1 = as.factor(QID25_1),
+         QID25_2 = as.factor(QID25_2),
+         QID25_3 = as.factor(QID25_3),
+         QID25_4 = as.factor(QID25_4),
+         QID25_5 = as.factor(QID25_5),
+         QID25_6 = as.factor(QID25_6)) %>% 
+  mutate(QID10 = str_replace(QID10,"0","1"),
+         QID16 = str_replace(QID16,"0","1")) %>% 
+  mutate(QID10 = as.factor(QID10),
+         QID16 = as.factor(QID16)) %>% 
+  head() %>%
+  kable(caption = "Data after deleting the direct identifiers") %>% 
+  kable_styling(bootstrap_options = c("basc","striped","hover"))
+  
+```
+
+```{r data1-store,include=FALSE}
+data1 <- data %>% 
+  select(-c(IPAddress,ResponseID,ResponseLastName,ResponseFirstName,LocationLatitude,LocationLongitude,QID28)) %>% 
+  mutate(Finished = as.factor(Finished),
+         QID12 = as.factor(QID12),
+         QID10 = as.character(QID10),
+         QID14 = as.factor(QID14),
+         QID16 = as.character(QID16),
+         QID20 = as.factor(QID20),
+         QID23 = as.factor(QID23),
+         QID26 = as.factor(QID26),
+         QID27 = as.factor(QID27),
+         QID17_1 = as.factor(QID17_1),
+         QID17_2 = as.factor(QID17_2),
+         QID17_3 = as.factor(QID17_3),
+         QID17_4 = as.factor(QID17_4),
+         QID17_5 = as.factor(QID17_5),
+         QID18_1 = as.factor(QID18_1),
+         QID18_2 = as.factor(QID18_2),
+         QID18_3 = as.factor(QID18_3),
+         QID18_4 = as.factor(QID18_4),
+         QID18_5 = as.factor(QID18_5),
+         QID24_1 = as.factor(QID24_1),
+         QID24_2 = as.factor(QID24_2),
+         QID24_3 = as.factor(QID24_3),
+         QID24_4 = as.factor(QID24_4),
+         QID24_5 = as.factor(QID24_5),
+         QID24_6 = as.factor(QID24_6),
+         QID25_1 = as.factor(QID25_1),
+         QID25_2 = as.factor(QID25_2),
+         QID25_3 = as.factor(QID25_3),
+         QID25_4 = as.factor(QID25_4),
+         QID25_5 = as.factor(QID25_5),
+         QID25_6 = as.factor(QID25_6)) %>% 
+    mutate(QID10 = str_replace(QID10,"0","1"),
+         QID16 = str_replace(QID16,"0","1")) %>% 
+  mutate(QID10 = as.factor(QID10),
+         QID16 = as.factor(QID16))
+
+
+```
+
+## De-identification strategy
+
+In the above \@ref(tab:tbl1), we can still see that,there some variables like **age**, **QID21**,**QID22** can be used to identify a person. In order to make the data more protected and also making sure that the **utility** of the data s not reduced, we performed the following **de-identification technique**:
+
+*  On ***age***, **aggregation** was applied to convert into age_groups of **5 years**.
+*  On both ***QID21***,***QID22***, **Perturbation** was used because:
+   *  Using this technique, the utility of the data is not reduced as it is in accordance with age groups.
+   *  Individual data gets censored,which reduces the identification risk.
+   
+Moreover, I have also made below updations:
+
+*  Removed the unwanted variables (Will be of no use in analysis)
+*  Converted the composite variable like **RecordedDate** into separate variables,
+*  Renamed other variables to some meaningful names.
+
+```{r de-ident1}
+data1 %>% 
+  select(-c(StartDate,EndDate,QID29)) %>% 
+  separate(RecordedDate,into = c("Year","Month","Day")) %>% 
+  mutate(Year = as.numeric(Year),
+         Month = as.numeric(Month),
+         Day = as.numeric(Day)) %>% 
+  rename(age = QID6,
+         adults = QID7,
+         children = QID8,
+         postcode = QID15,
+         exp_house_inc_2021 = QID19,
+         house_inc_2020 = QID21,
+         house_inc_2019 = QID22,
+         work_mood_2019 = QID12,
+         work_mood_2020 = QID10,
+         avg_work_hour_2019 = QID14,
+         avg_work_hour_2020 = QID16,
+         TDW_2019 = QID17_1,
+         EM_2019 = QID17_2,
+         EE_2019 = QID17_3,
+         LT_2019 = QID17_4,
+         ON_2019 = QID17_5,
+         TDW_2020 = QID18_1,
+         EM_2020 = QID18_2,
+         EE_2020 = QID18_3,
+         LT_2020 = QID18_4,
+         ON_2020 = QID18_5,
+         work_stability_2019 = QID20,
+         work_stability_2020 = QID23,
+         comfortable_2019 = QID24_1,
+         lonely_2019 = QID24_2,
+         active_2019 = QID24_3,
+         connected_2019 = QID24_4,
+         peaceful_2019 = QID24_5,
+         chaotic_2019 = QID24_6,
+         comfortable_2020 = QID25_1,
+         lonely_2020 = QID25_2,
+         active_2020 = QID25_3,
+         connected_2020 = QID25_4,
+         peaceful_2020 = QID25_5,
+         chaotic_2020 = QID25_6,
+         mental_cond_2019 = QID26,
+         mental_cond_2020 = QID27) %>%
+  mutate(age_group = cut(age, breaks = 5)) %>%
+  group_by(age_group) %>%
+  mutate(new_house_inc_2019 = sample(house_inc_2019,n(),replace = FALSE),
+         new_house_inc_2020 = sample(house_inc_2020,n(),replace = FALSE)) %>%
+  select(-c(age,house_inc_2020,house_inc_2019)) %>% 
+   head() %>%
+  kable(caption = "Data after applying de-identification technique and renaming variables") %>% 
+  kable_styling(bootstrap_options = c("basc","striped","hover"))
+
+```
+
+
+```{r de-ident,include=FALSE}
+data2 <- data1 %>% 
+  select(-c(StartDate,EndDate,QID29)) %>% 
+  separate(RecordedDate,into = c("Year","Month","Day")) %>% 
+  mutate(Year = as.numeric(Year),
+         Month = as.numeric(Month),
+         Day = as.numeric(Day)) %>% 
+  rename(age = QID6,
+         adults = QID7,
+         children = QID8,
+         postcode = QID15,
+         exp_house_inc_2021 = QID19,
+         house_inc_2020 = QID21,
+         house_inc_2019 = QID22,
+         work_mood_2019 = QID12,
+         work_mood_2020 = QID10,
+         avg_work_hour_2019 = QID14,
+         avg_work_hour_2020 = QID16,
+         TDW_2019 = QID17_1,
+         EM_2019 = QID17_2,
+         EE_2019 = QID17_3,
+         LT_2019 = QID17_4,
+         ON_2019 = QID17_5,
+         TDW_2020 = QID18_1,
+         EM_2020 = QID18_2,
+         EE_2020 = QID18_3,
+         LT_2020 = QID18_4,
+         ON_2020 = QID18_5,
+         work_stability_2019 = QID20,
+         work_stability_2020 = QID23,
+         comfortable_2019 = QID24_1,
+         lonely_2019 = QID24_2,
+         active_2019 = QID24_3,
+         connected_2019 = QID24_4,
+         peaceful_2019 = QID24_5,
+         chaotic_2019 = QID24_6,
+         comfortable_2020 = QID25_1,
+         lonely_2020 = QID25_2,
+         active_2020 = QID25_3,
+         connected_2020 = QID25_4,
+         peaceful_2020 = QID25_5,
+         chaotic_2020 = QID25_6,
+         mental_cond_2019 = QID26,
+         mental_cond_2020 = QID27) %>%
+  mutate(age_group = cut(age, breaks = 5)) %>%
+  group_by(age_group) %>%
+  mutate(new_house_inc_2019 = sample(house_inc_2019,n(),replace = FALSE),
+         new_house_inc_2020 = sample(house_inc_2020,n(),replace = FALSE)) %>%
+  select(-c(age,house_inc_2020,house_inc_2019))
+
+data2
+```
+
+## Check strategy
+
+### Can the new generated house_inc_2019 be used to identify a person?
+
+The below \@ref(fig:plt-inc-2019) showcases that:
+
+*  There are some extreme values which might help in identifying a person.
+*  One solution to this is remove these values or change them using the **top-bottom technique**.
+
+To have a better insight look at table \@ref(tab:tbl-inc-2019) 
+
+```{r plt-inc-2019,fig.cap="Value Distribution of household income in 2019"}
+plt1 <- data2 %>%
+  ggplot(aes(y = new_house_inc_2019)) +
+  geom_boxplot() +
+  ylab("Household Income 2019")
+ggplotly(plt1)
+```
+
+```{r tbl-inc-2019,message=FALSE}
+data2 %>%
+  select(new_house_inc_2019) %>% 
+  slice_max(new_house_inc_2019,n=2) %>% 
+  kable(caption = "Tabular Distribution of top 2 household income in 2019 w.r.t age group") %>% 
+  kable_styling(bootstrap_options = c("basc","striped","hover"))
+```
+
+Therefore table \@ref(tab:tbl-inc-2019) clearly states that removal/updation of the extreme values is not required because:
+
+*  Due to the addition of derived variable **age_group**, it is impossible to recognize the exact age of a person.
+*  In addition the **perturbation** technique used above makes the protects by assigning the extreme values to a different person in a same age_group.
+*  Moreover the age_group in which the max. value seen is **(48.4,61.6]**, which itself has the max. occurrence of values in this data, making it again a cumbersome task to figure the original identity. (see table \@ref(tab:tbl1-inc-2019))
+
+```{r tbl1-inc-2019,message=FALSE}
+data2 %>%
+  select(age_group) %>% 
+  summary() %>% 
+  kable(caption = "Tabular Distribution of top 2 household income in 2019 w.r.t age group") %>% 
+  kable_styling(bootstrap_options = c("basc","striped","hover"))
+```
+The above table \@ref(tab:tbl1-inc-2019) also confirms that the **aggregation** technique has successfully made the age variable as a low risk gateway to know the identity of a person.  
+
+### Can the new generated house_inc_2020 be used to identify a person?
+
+No, the newly generated variable **house_inc_2020** cannot be used to identify a person and the same can be inferred clearly from figure \@ref(fig:plt-inc-2020) and table \@ref(tab:tbl-inc-2020).
+
+```{r plt-inc-2020,fig.cap="Value Distribution of household income in 2020"}
+plt2 <- data2 %>%
+  ggplot(aes(y = new_house_inc_2020)) +
+  geom_boxplot() +
+  ylab("Household Income 2020")
+ggplotly(plt2)
+```
+
+
+```{r tbl-inc-2020,message=FALSE}
+data2 %>%
+  select(new_house_inc_2020) %>% 
+  slice_max(new_house_inc_2020,n=2) %>% 
+  kable(caption = "Tabular Distribution of top 2 household income in 2019 w.r.t age group") %>% 
+  kable_styling(bootstrap_options = c("basc","striped","hover"))
+```
+
+
+## Computer readable structure
+
+For a data to be finally interpreted by a machine, a well structured and easily readable computer format is required.The most common machine-readable format is **“Comma Separated Variables” (CSV)**, which is provided directly by many standard database and spreadsheet products. CSV stores tabular data in a text-based format, making it easily exchanged by machines.
+
+## Save data in a csv form in the data folder
+
+```{r write-data}
+write_csv(data2,here::here("data/release-data-Garg-Karan.csv"))
+```
+```
+
+## Resources
+
+@R-data
+@R-bookdown
+@R-dplyr
+@R-ggplot2
+@R-here
+@R-kableExtra
+@R-knitr
+@R-plotly
+@R-tidyverse
+
+
